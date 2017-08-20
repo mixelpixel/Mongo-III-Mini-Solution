@@ -21,7 +21,7 @@ exports.createPost = (req, res) => {
 exports.listPosts = (req, res) => {
     Post.find({}).exec()
         .then((posts) => {
-            posts.populate(_parent, comments);
+            posts.populate('comments');
             res.send(posts);
         })
         .catch((err) => {
