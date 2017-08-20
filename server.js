@@ -10,7 +10,7 @@ server.use(bodyParser.json());
 
 mongoose.Promise = global.Promise;
 const connect = mongoose.connect(
-    'mongodb://localhost/Postdb', 
+    'mongodb://localhost/posts-db', 
     { useMongoClient: true }
 );
 
