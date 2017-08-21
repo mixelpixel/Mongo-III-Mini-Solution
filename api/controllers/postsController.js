@@ -14,44 +14,34 @@ const createPost = (req, res) => {
         })
         .catch((err) => {
             res.status(STATUS_USER_ERROR);
-            res.json(err);
+            res.json({ stack: err.stack, message: err.message });
         });
 };
 
 const listPosts = (req, res) => {
-    Post.find({}).exec()
+    Post.find({})
+        .populate('comments', 'text')
+        .exec()
         .then((posts) => {
-            posts.populate('comments').exec()
-                .then((p) => {
-                    res.send(p);
-                })
-                .catch((err) => {
-                    res.status(STATUS_USER_ERROR);
-                    res.json(err);
-                });
-        })
+            res.json(posts);
+        }) 
         .catch((err) => {
             res.status(STATUS_USER_ERROR);
-            res.json(err);
+            res.json({ stack: err.stack, message: err.message });
         });
 };
 
 const findPost = (req, res) => {
     const { id } = req.params;
-    Post.findById(id).exec()
+    Post.findById(id)
+        .populate('comments', 'text')
+        .exec()
         .then((post) => {
-            post.populate('comments').exec()
-                .then((p) => {
-                    res.send(p);
-                })
-                .catch((err) => {
-                    res.status(STATUS_USER_ERROR);
-                    res.json(err);
-                });
+            res.json(post);
         })
         .catch((err) => {
             res.status(STATUS_USER_ERROR);
-            res.json(err);
+            res.json({ stack: err.stack, message: err.message });
         });
 };
 
@@ -62,7 +52,8 @@ const addComment = (req, res) => {
     const newComment = new Comment({ _parent: id, text });
     newComment.save()
         .then((comment) => {
-            Post.findById(id).exec()
+            Post.findById(id)
+                .exec()
                 .then((post) => {
                     post.comments.push(comment);
                     post.save();
@@ -70,61 +61,66 @@ const addComment = (req, res) => {
                 })
                 .catch((err) => {
                 res.status(STATUS_USER_ERROR);
-                res.json(err);
+                res.json({ stack: err.stack, message: err.message });
             });
         })
         .catch((err) => {
             res.status(STATUS_USER_ERROR);
-            res.json(err);
+            res.json({ stack: err.stack, message: err.message });
         });
-
-    
 };
 
 const deleteComment = (req, res) => {
     const { id, commentId } = req.params;
 
-    Comment.findByIdAndRemove(commentId).exec()
-       .catch((err) => {
-           res.status(STATUS_USER_ERROR);
-           res.json(err);
-       });
+    const comment = Comment.findByIdAndRemove(commentId)
+        .exec()
+        .then((comment) => {
+            return Promise.resolve(comment);
+        })
+        .catch((err) => {
+            res.status(STATUS_USER_ERROR);
+            res.json({ stack: err.stack, message: err.message });
+        });
 
-    Post.findById(id).exec()
+    Post.findById(id)
+        .exec()
         .then((post) => {
             const index = post.comments.findIndex((c) => {
                 c._id === comment._id;
             });
-            post.comments.split(index, 1);
+            post.comments.splice(index, 1);
             res.json({ success: true });
         })
         .catch((err) => {
             res.status(STATUS_USER_ERROR);
-            res.json(err);
+            res.json({ stack: err.stack, message: err.message });
         });
 };
 
 const deletePost = (req, res) => {
     const { id } = req.params;
-    
-    const comments = Post.findByIdAndRemove(id).exec()
+    console.log('id: ', id); 
+    const comments = Post.findByIdAndRemove(id)
+        .exec()
         .then((post) => {
             return Promise.resolve(post.comments);
         })
         .catch((err) => {
             res.status(STATUS_USER_ERROR);
-            res.json(err);
+            res.json({ stack: err.stack, message: err.message });
         });
 
-   Comment.remove({
-       '_id': { $in: comments }
-   }).exec()
+    Comment.remove({
+        '_id': { $in: comments }
+    })
+    .exec()
     .then(() => {
         res.send({ success: true });
     })
     .catch((err) => {
         res.status(STATUS_USER_ERROR);
-        res.json(err);
+        res.json({ stack: err.stack, message: err.message });
     });
 };
 
