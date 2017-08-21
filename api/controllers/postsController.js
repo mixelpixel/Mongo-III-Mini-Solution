@@ -5,10 +5,10 @@ const Comment = mongoose.model('Comment');
 
 const STATUS_USER_ERROR = 422;
 
-exports.createPost = (req, res) => {
-    const { title, text } = req.body;
+const createPost = (req, res) => {
+    const { title, text } = req.query;
     const newPost = new Post({ title, text });
-    newPost.save().exec()
+    newPost.save()
         .then((newPost) => {
             res.json(newPost);
         })
@@ -18,11 +18,17 @@ exports.createPost = (req, res) => {
         });
 };
 
-exports.listPosts = (req, res) => {
+const listPosts = (req, res) => {
     Post.find({}).exec()
         .then((posts) => {
-            posts.populate('comments');
-            res.send(posts);
+            posts.populate('comments').exec()
+                .then((p) => {
+                    res.send(p);
+                })
+                .catch((err) => {
+                    res.status(STATUS_USER_ERROR);
+                    res.json(err);
+                });
         })
         .catch((err) => {
             res.status(STATUS_USER_ERROR);
@@ -30,12 +36,18 @@ exports.listPosts = (req, res) => {
         });
 };
 
-exports.findPost = (req, res) => {
+const findPost = (req, res) => {
     const { id } = req.params;
     Post.findById(id).exec()
         .then((post) => {
-            post.populate(_parent, comments);
-            res.send(post);
+            post.populate('comments').exec()
+                .then((p) => {
+                    res.send(p);
+                })
+                .catch((err) => {
+                    res.status(STATUS_USER_ERROR);
+                    res.json(err);
+                });
         })
         .catch((err) => {
             res.status(STATUS_USER_ERROR);
@@ -43,33 +55,33 @@ exports.findPost = (req, res) => {
         });
 };
 
-exports.addComment = (req, res) => {
+const addComment = (req, res) => {
     const { id } = req.params;
-    const { text } = req.body;
+    const { text } = req.query;
 
-    let newComment = new Comment({ _parent: id, text });
-    newComment = newComment.save().exec()
+    const newComment = new Comment({ _parent: id, text });
+    newComment.save()
         .then((comment) => {
-            return Promise.resolve(comment);
+            Post.findById(id).exec()
+                .then((post) => {
+                    post.comments.push(comment);
+                    post.save();
+                    res.send({ success: true });
+                })
+                .catch((err) => {
+                res.status(STATUS_USER_ERROR);
+                res.json(err);
+            });
         })
         .catch((err) => {
             res.status(STATUS_USER_ERROR);
             res.json(err);
         });
 
-    Post.findById(id).exec()
-        .then((post) => {
-            post.comments.push(newComment._id);
-            post.save();
-            res.send({ success: true });
-        })
-        .catch((err) => {
-            res.status(STATUS_USER_ERROR);
-            res.json(err);
-        });
+    
 };
 
-exports.deleteComment = (req, res) => {
+const deleteComment = (req, res) => {
     const { id, commentId } = req.params;
 
     Comment.findByIdAndRemove(commentId).exec()
@@ -92,7 +104,7 @@ exports.deleteComment = (req, res) => {
         });
 };
 
-exports.deletePost = (req, res) => {
+const deletePost = (req, res) => {
     const { id } = req.params;
     
     const comments = Post.findByIdAndRemove(id).exec()
@@ -114,5 +126,14 @@ exports.deletePost = (req, res) => {
         res.status(STATUS_USER_ERROR);
         res.json(err);
     });
+};
+
+module.exports = {
+    createPost,
+    listPosts,
+    findPost,
+    addComment,
+    deleteComment,
+    deletePost
 };
 
